@@ -6,3 +6,8 @@ data/tuning_results.txt
 data/incoming_data.txt
 __pycache__/
 .vscode
+.Rhistory
+helper_files/pickle_validator_result.txt
+sorter.py
+pickled_files/*.pkl
+pickled_files/relic/
