@@ -11,3 +11,4 @@ helper_files/pickle_validator_result.txt
 sorter.py
 pickled_files/*.pkl
 pickled_files/relic/
+buckets/*.txt
