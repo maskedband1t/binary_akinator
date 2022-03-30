@@ -1,0 +1,8 @@
+busybox/
+binaries_to_bounce/
+test_docs/
+senior_project/
+data/tuning_results.txt
+data/incoming_data.txt
+__pycache__/
+.vscode

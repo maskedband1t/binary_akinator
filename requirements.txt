@@ -1,0 +1,6 @@
+pandas
+torch
+click
+matplotlib
+pefile
+lief
