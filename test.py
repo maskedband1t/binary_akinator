@@ -34,22 +34,22 @@ import click
 
 #transforms company names with assumptions taken from: http://www.legislation.gov.uk/uksi/2015/17/regulation/2/made
 def ngrams(string, n=3):
-    """Takes an input string, cleans it and converts to ngrams. 
-    This script is focussed on cleaning UK company names but can be made generic by removing lines below"""
+    """Takes an input string, cleans it and converts to ngrams.""" 
     string = str(string)
     string = string.lower() # lower case
     string = fix_text(string) # fix text
-    string = string.split('t/a')[0] # split on 'trading as' and return first name only
-    string = string.split('trading as')[0] # split on 'trading as' and return first name only
     string = string.encode("ascii", errors="ignore").decode() #remove non ascii chars
     chars_to_remove = [")","(",".","|","[","]","{","}","'","-"]
     rx = '[' + re.escape(''.join(chars_to_remove)) + ']' #remove punc, brackets etc...
     string = re.sub(rx, '', string)
-    string = string.replace('&', 'and')
-    string = string.replace('limited', 'ltd')
-    string = string.replace('public limited company', 'plc')
-    string = string.replace('united kingdom', 'uk')
-    string = string.replace('community interest company', 'cic')
+    string = string.replace('.rela.', '')
+    string = string.replace('.rodata.','')
+    string = string.replace('.text.', '')
+    string = string.replace('.symtab', '')
+    string = string.replace('.strtab', '')
+    string = string.replace('.bss', '')
+    string = string.replace('.shstrtab','')
+    string = string.replace('.data', '')
     string = string.title() # normalise case - capital at start of each word
     string = re.sub(' +',' ',string).strip() # get rid of multiple spaces and replace with a single
     string = ' '+ string +' ' # pad names for ngrams...
@@ -64,7 +64,7 @@ def ngrams(string, n=3):
 pickle_directory = 'pickled_files'
 script_path = Path(__file__).parent
 
-def vectorize_and_query(_library : list[str], _hashnames: list[str], _ingested_str : str, _kNN: int, _benchmark: int):
+def vectorize_and_query(_library : list[str], _hashnames: list[str], _ingested_str : str, _file_hash: str, _filename_base: str, _kNN: int, _benchmark: int):
 
   ###FIRST TIME RUN - takes about 5 minutes... used to build the matching table
   from sklearn.feature_extraction.text import TfidfVectorizer
@@ -85,16 +85,6 @@ def vectorize_and_query(_library : list[str], _hashnames: list[str], _ingested_s
 
   
   t1 = time.time()
-  ##### Create a list of messy items to match here:
-  #df_CF = pd.read_csv(input2_csv) # file containing messy supplier names to match against
-  #messy_names = list(df_CF[input2_column].unique()) #unique list of names
-
-  #Creation of vectors for the messy names
-
-  # #FOR LOADING ONLY - only required if items have been saved previously
-  # vectorizer = pickle.load(open("Data/vectorizer.pkl","rb"))
-  # tf_idf_matrix = pickle.load(open("Data/Comp_tfidf.pkl","rb"))
-  # org_names = pickle.load(open("Data/Comp_names.pkl","rb"))
 
   #messy_tf_idf_matrix = vectorizer.transform(messy_names)
   _ingested_list = [_ingested_str]
@@ -132,7 +122,7 @@ def vectorize_and_query(_library : list[str], _hashnames: list[str], _ingested_s
   print('kNN time total=%f (sec), per query=%f (sec), per query adjusted for thread number=%f (sec)' % 
         (end-start, float(end-start)/query_qty, num_threads*float(end-start)/query_qty))
 
-  
+  # index.saveIndex('savedIndex',True) save this for when pypi gets updated
 
   mts =[]
   '''
@@ -142,16 +132,39 @@ def vectorize_and_query(_library : list[str], _hashnames: list[str], _ingested_s
   print(nbrs[0][1])
   print(nbrs[0][0]) 
   '''
+
+  new_result = 'results/%s-%s.txt' %(_file_hash, _filename_base)
+  with open(new_result, 'w') as result:
+    result.write('file hash is: %s \n' %(_file_hash))
+    result.write('file hash is: %s \n' %(_filename_base))
+    result.close()
+
   # prints the N closest neighbors to this file.
   if(_kNN > 1):
     print('\n')
     print('Printing kNN -> (%s) matches: ' %(_kNN))
+    with open(new_result, 'a') as result:
+        result.write('\nPrinting kNN -> (%s) matches: \n\n' %(_kNN)) 
+        result.close()
+
     for i in range(_kNN):
       print(_hashnames[nbrs[0][0][i]])
       print(nbrs[0][1][i])
 
+      with open(new_result, 'a') as result:
+        result.write('%s\n' %(_hashnames[nbrs[0][0][i]]))
+        result.write(' with confidence: %s\n' %(nbrs[0][1][i]))
+        result.write("==============\n")
+        result.close()
+    
+    
+
   print('\n')
   print('Printing matches passing confidence benchmark percentage (default is 60): %s ' %(_benchmark))
+  with open(new_result, 'a') as result:
+          result.write('Printing matches passing confidence benchmark percentage (default is 60): %s ' %(_benchmark))
+          result.close()
+  
   for i in range(_kNN): #TODO: make the range the number of possible files.
     try:
       #_matched = _hashnames[nbrs[i][0][0]] ## need this to be the hash
@@ -166,7 +179,13 @@ def vectorize_and_query(_library : list[str], _hashnames: list[str], _ingested_s
     if _conf != None:
       if(abs(_conf)*100 >= _benchmark):
         print("closest file is: %s" %(_matched))
-        print("with confidence: %s" %(_conf)) 
+        print("with confidence: %s" %(_conf))
+
+        with open(new_result, 'a') as result:
+          result.write("closest file is: %s \n" %(_matched))
+          result.write("with confidence: %s" %(_conf))
+          result.write("==============\n")
+          result.close() 
   
 '''
   strips filename to first reverse occurance of sep, 
@@ -245,9 +264,9 @@ def read_pickle(filename : str) -> str:
           _hashnames: List of corresponding hashes
           _ingested: input binary string
 '''
-def compare_these(_library: list[str], _hashnames: list[str], _ingested: str, _kNN: int, _benchmark: int):
+def compare_these(_library: list[str], _hashnames: list[str], _ingested: str, _file_hash: str, _filename_base: str, _kNN: int, _benchmark: int):
   print("entering vectorize and query")
-  vectorize_and_query(_library, _hashnames,_ingested,_kNN, _benchmark)
+  vectorize_and_query(_library, _hashnames,_ingested,_file_hash, _filename_base, _kNN, _benchmark)
 
 '''
   reads the buckets from bounce and pickles the combined contents
@@ -270,6 +289,8 @@ def read_and_ingest(file_hash: str, filename_base: str):
   with open(new_pickle, 'wb') as ingested_pickle: # save combined string into output/ represents file
     print("creating pickle. check pickled_files folder...")
     pickle.dump(_joined, ingested_pickle)
+
+  
 
 @click.command()
 @click.option('--bounce', is_flag=True, help="set this flag if a previously bounced file needs to get re-bounced")
@@ -323,7 +344,7 @@ def main(bounce, n, benchmark, incoming_binary):
   '''
   pass in this list of strings and the input string to comparison functions
   '''
-  compare_these(set_of_strings, set_of_hashnames, imported_lib_string, n, benchmark)
+  compare_these(set_of_strings, set_of_hashnames, imported_lib_string, file_hash, filename_base, n, benchmark)
   print("\ncompared file with hash %s to rest of files in set" %(file_hash))
   print("run to validate pickle: python3 /helper_files/pickle_validator.py %s" %(file_hash))
 if __name__ == '__main__':

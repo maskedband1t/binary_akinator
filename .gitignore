@@ -12,3 +12,5 @@ sorter.py
 pickled_files/*.pkl
 pickled_files/relic/
 buckets/*.txt
+win_exe/
+results/*.txt

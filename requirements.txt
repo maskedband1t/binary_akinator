@@ -4,3 +4,6 @@ click
 matplotlib
 pefile
 lief
+nmslib
+pathlib
+
