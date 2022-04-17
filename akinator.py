@@ -2,22 +2,17 @@
 # -*- coding: utf-8 -*-
 
 ## load libraries and set-up:
-from cgi import test
 import time
 from pathlib import Path
-from posixpath import basename
-from telnetlib import EL
 import pandas as pd
 
 pd.set_option("display.max_colwidth", None)
 import os
 import pandas as pd
-import numpy as np
 import os
 import pickle  # optional - for saving outputs
 import re
 import time
-from matplotlib import pyplot as plt
 import sys
 import csv
 import nmslib
@@ -175,12 +170,13 @@ def vectorize_and_query(
 	"""
     mts = []
     """
-  print(len(nbrs))
-  print(len(nbrs[0][1]))
-  print(nbrs[0])
-  print(nbrs[0][1])
-  print(nbrs[0][0]) 
-  """
+    prodding and poking at nbrs data structure (no formal structure outline)
+    print(len(nbrs))
+    print(len(nbrs[0][1]))
+    print(nbrs[0])
+    print(nbrs[0][1])
+    print(nbrs[0][0]) 
+    """
 
     new_result = "results/%s-%s.txt" % (_file_hash, _filename_base)
     with open(new_result, "w") as result:
