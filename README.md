@@ -27,7 +27,8 @@ This tool is run on an ELF or PE binary and tries to return k-Nearest-Neighbors 
         * directions on how to validate the generated pickle for recently ingested file are given as part of shell output.
 
     IMPORTANT NOTES: (updated as necessary)
-        ![Diagram](https://github.com/maskedband1t/binary_akinator/blob/main/images/high_level_diagram.png?raw=true)
+        
+![Diagram](https://github.com/maskedband1t/binary_akinator/blob/main/images/high_level_diagram.png?raw=true)
 
 USAGE: 
     
