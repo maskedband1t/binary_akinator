@@ -83,7 +83,7 @@ def vectorize_and_query(
 
     t1 = time.time()  # used for timing - can delete
 
-    # Building the TFIDF off the clean dataset - takes about 5 min
+    # Building the TFIDF off the library set
     vectorizer = TfidfVectorizer(min_df=1, analyzer=ngrams)
 
     tf_idf_matrix = vectorizer.fit_transform(_library)
