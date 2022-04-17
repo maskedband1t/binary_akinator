@@ -1,25 +1,33 @@
 Binary Akinator DESCRIPTION:
-This tool is run on an ELF or PE binary and tries to return kNN files among those that have already been ingested into the pickled_files folder:
+This tool is run on an ELF or PE binary and tries to return k-Nearest-Neighbors files among those that have already been ingested into the pickled_files folder:
 
+    INTENDED USE:
+        * To be run on single binary file to compare against other files in existing library set
+        * Returns k-Nearest-Neighbors (kNN) among library set, or those passing benchmark confidence levels
 
     RUNNING:
-        * Requirements: Existence of /buckets & /model folders within project directory   (nothing needed in it)
+        * Requirements: Existence of /buckets & /model folders within project directory,   (nothing needed in it)
         * '--help' for help
 
-    TRAINING: 
-        - Runs a 20,000+ datapoint training set 
-        - classifies strings as pos/neg (neg indicating that string is undesirable ASCII)
-        - ~96% training set accuracy
-        - trains even if existing model if seeded (flag: '-s')
+    Library Set:
+        * Stored in pickled_files/ sub-directory
+        * populated by running akinator on them, to be ingested
+        * comprised of previously ingested files
 
-    VALIDATION:
-        - independent of training data
-        - 1000+ datapoint validation set
-        - runs after training, can be enabled with '-e' flag
-    SAVE/LOAD MODEL:
-        - after training, model is automatically saved to models/ folder
-        - re-training means saved model file gets rewritten (not unique file each train [TODO: could make a flag out of that])
-        - If training not needed, the saved model will get loaded in for data inference
+    Data to be matched:
+        * Pipes resulting buckets from Binary Bouncer, performs KNN Document Matching based on this data for each binary file in library set
+    
+    Results:
+        * shell output
+        * results/ folder stores most recent results for each hash/filename pair
+        * TODO: perhaps output the command options that were run resulting in the specified result
+
+    Pickle Validator:
+        * helper_files/pickle_validator.py
+        * directions on how to validate the generated pickle for recently ingested file are given as part of shell output.
+
+    IMPORTANT NOTES: (updated as necessary)
+        ![Diagram](images/high_level_diagram.png)
 
 USAGE: 
     
