@@ -26,8 +26,11 @@ This tool is run on an ELF or PE binary and tries to return k-Nearest-Neighbors 
         * helper_files/pickle_validator.py
         * directions on how to validate the generated pickle for recently ingested file are given as part of shell output.
 
-    IMPORTANT NOTES: (updated as necessary)
-        
+    IMPORTANT NOTES: (updated as necessary):
+        * if file has changed after ingestion, results will not change until run again
+        * all results are static/pinned to library state when originally run, updated library may need updated results -> have to run akinator on relevant files again
+
+High Level Diagram:        
 ![Diagram](https://github.com/maskedband1t/binary_akinator/blob/main/images/high_level_diagram.png?raw=true)
 
 USAGE: 
