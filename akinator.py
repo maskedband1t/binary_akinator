@@ -9,19 +9,18 @@ from posixpath import basename
 from telnetlib import EL
 import pandas as pd
 pd.set_option('display.max_colwidth', None)
-from tqdm import tqdm
 import os
 import pandas as pd
 import numpy as np
 import os
 import pickle #optional - for saving outputs
 import re
-from tqdm import tqdm # used for progress bars (optional)
 import time
 from matplotlib import pyplot as plt
 import sys
 import csv
 import nmslib
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 
 import re
@@ -32,7 +31,10 @@ from ftfy import fix_text
 
 import click
 
-#transforms company names with assumptions taken from: http://www.legislation.gov.uk/uksi/2015/17/regulation/2/made
+'''
+	Used for matrix conversion, ngrams are the units on which we will build matrices using tf-idf and nmslib
+		TODO: may need to increase stripped sequences if unimportant terms are biased
+'''
 def ngrams(string, n=3):
     """Takes an input string, cleans it and converts to ngrams.""" 
     string = str(string)
@@ -66,15 +68,12 @@ script_path = Path(__file__).parent
 
 def vectorize_and_query(_library : list[str], _hashnames: list[str], _ingested_str : str, _file_hash: str, _filename_base: str, _kNN: int, _benchmark: int):
 
-  ###FIRST TIME RUN - takes about 5 minutes... used to build the matching table
-  from sklearn.feature_extraction.text import TfidfVectorizer
-  import time
   t1 = time.time() # used for timing - can delete
  
 
   #Building the TFIDF off the clean dataset - takes about 5 min
   vectorizer = TfidfVectorizer(min_df=1, analyzer=ngrams)
-  #tf_idf_matrix = vectorizer.fit_transform(org_names)
+
   tf_idf_matrix = vectorizer.fit_transform(_library) 
   t = time.time()-t1
   print("Time:", t) # used for timing - can delete
@@ -86,32 +85,62 @@ def vectorize_and_query(_library : list[str], _hashnames: list[str], _ingested_s
   
   t1 = time.time()
 
-  #messy_tf_idf_matrix = vectorizer.transform(messy_names)
+  
   _ingested_list = [_ingested_str]
   messy_tf_idf_matrix = vectorizer.transform(_ingested_list)
 
   
-
+  '''
+	Using NMSLIB for vector matching: https://benfred.github.io/nmslib/api.html#
+	'''
 
   # create a random matrix to index
   data_matrix = tf_idf_matrix#[0:1000000]
 
   # Set index parameters
   # These are the most important ones
-  M = 80
-  efC = 1000
+  # currently not used. defaulted
+  #M = 80
+  #efC = 1000
 
   num_threads = 4 # adjust for the number of threads
   # Intitialize the library, specify the space, the type of the vector and add data points 
+  
+  """ nmslib.init acts act the main entry point into NMS lib. This function should be called first before calling any other method.
+	# 	Parameters:	
+	#
+		#	space (str optional) - The metric space to create for this index
+		#	method (str optional) - The index method to use
+		#	data_type (nmslib.DataType optional) - The type of data to index (dense/sparse/string vectors)
+			dist_type (nmslib.DistType optional) - The type of index to create (float/double/int)
+
+		Return type: A new NMSLIB Index. 
+	"""
   index = nmslib.init(method='simple_invindx', space='negdotprod_sparse_fast', data_type=nmslib.DataType.SPARSE_VECTOR) 
 
   index.addDataPointBatch(data_matrix)
-  # Create an index
+
+  '''
+		Create index, make available for query
+			* Keep index creation time in case needed for comparisons *
+	'''
   start = time.time()
   index.createIndex() 
   end = time.time() 
   print('Indexing time = %f' % (end-start))
-  # Number of neighbors 
+
+  ''' 	Perform queries on second matrix
+		K: number of neighbors to return (for now, 1)
+		knnQueryBatch() ->
+			* Performs multiple queries on the index, distributing the work over a thread pool
+			 :param input: A list of queries to query for :type input: list 
+			 :param k: The number of neighbours to return :type k: int optional 
+			 :param num_threads: The number of threads to use :type num_threads: int optional
+			
+			Returns: A list of tuples of (ids, distances) -> nbrs
+		* Keep index query time in case needed for comparisons *
+	'''
+
   num_threads = 4
   K=_kNN
   query_matrix = messy_tf_idf_matrix
@@ -122,8 +151,12 @@ def vectorize_and_query(_library : list[str], _hashnames: list[str], _ingested_s
   print('kNN time total=%f (sec), per query=%f (sec), per query adjusted for thread number=%f (sec)' % 
         (end-start, float(end-start)/query_qty, num_threads*float(end-start)/query_qty))
 
-  # index.saveIndex('savedIndex',True) save this for when pypi gets updated
-
+  # index.saveIndex('savedIndex',True) save this for when pypi gets updated: https://github.com/nmslib/nmslib/issues/489
+  # to use with: https://github.com/AlbertSuarez/nmslib-viz to visualize graph
+  
+  '''
+		Next step is to poll matches
+	'''
   mts =[]
   '''
   print(len(nbrs))
@@ -165,7 +198,7 @@ def vectorize_and_query(_library : list[str], _hashnames: list[str], _ingested_s
           result.write('Printing matches passing confidence benchmark percentage (default is 60): %s ' %(_benchmark))
           result.close()
   
-  for i in range(_kNN): #TODO: make the range the number of possible files.
+  for i in range(_kNN): #TODO: make the range the number of possible files i.e: size of library minus 1 (ingested file).
     try:
       #_matched = _hashnames[nbrs[i][0][0]] ## need this to be the hash
       _matched = _hashnames[nbrs[0][0][i]] ## need this to be the hash
@@ -347,5 +380,6 @@ def main(bounce, n, benchmark, incoming_binary):
   compare_these(set_of_strings, set_of_hashnames, imported_lib_string, file_hash, filename_base, n, benchmark)
   print("\ncompared file with hash %s to rest of files in set" %(file_hash))
   print("run to validate pickle: python3 /helper_files/pickle_validator.py %s" %(file_hash))
+
 if __name__ == '__main__':
   main()
