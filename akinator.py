@@ -72,6 +72,7 @@ def vectorize_and_query(
     _ingested_str: str,
     _file_hash: str,
     _filename_base: str,
+    _num_searchable: int,
     _kNN: int,
     _benchmark: int,
 ):
@@ -81,15 +82,19 @@ def vectorize_and_query(
     # Building the TFIDF off the library set
     vectorizer = TfidfVectorizer(min_df=1, analyzer=ngrams)
 
+    # fit_transform() is used on training data
     tf_idf_matrix = vectorizer.fit_transform(_library)
+
     t = time.time() - t1
     print("Time:", t)  # used for timing - can delete
     print(tf_idf_matrix.shape)
 
-    t1 = time.time()
-
     _ingested_list = [_ingested_str]
+
+    # transform() is used on test data (ingested file)
     messy_tf_idf_matrix = vectorizer.transform(_ingested_list)
+
+    # https://towardsdatascience.com/what-and-why-behind-fit-transform-vs-transform-in-scikit-learn-78f915cf96fe
 
     """
 	Using NMSLIB for vector matching: https://benfred.github.io/nmslib/api.html#
@@ -187,12 +192,17 @@ def vectorize_and_query(
     # prints the N closest neighbors to this file.
     if _kNN > 1:
         print("\n")
-        print("Printing kNN -> (%s) matches: " % (_kNN))
+        print("Printing kNN -> (%s) matches: (max = searchable library size) " % (_kNN))
         with open(new_result, "a") as result:
-            result.write("\nPrinting kNN -> (%s) matches: \n\n" % (_kNN))
+            result.write(
+                "\nPrinting kNN -> (%s) matches: (max = searchable library size) \n\n"
+                % (_kNN)
+            )
             result.close()
 
-        for i in range(_kNN):
+        max_range = min(_num_searchable, _kNN)
+
+        for i in range(max_range):
             print(_hashnames[nbrs[0][0][i]])
             print(nbrs[0][1][i])
 
@@ -215,7 +225,7 @@ def vectorize_and_query(
         result.close()
 
     for i in range(
-        _kNN
+        max_range
     ):  # TODO: make the range the number of possible files i.e: size of library minus 1 (ingested file).
         try:
             # _matched = _hashnames[nbrs[i][0][0]] ## need this to be the hash
@@ -307,6 +317,9 @@ def bounce_and_ingest(bounce, filename):
 
 
 def pickle_fs_contains(file_hash: str) -> bool:
+    if not os.path.isdir(pickle_directory):
+        os.mkdir(pickle_directory)
+        print("Creating 'pickled_files' directory to host library set within current.")
     for filename in os.listdir(pickle_directory):
         if file_hash in filename:
             return True
@@ -339,12 +352,20 @@ def compare_these(
     _ingested: str,
     _file_hash: str,
     _filename_base: str,
+    _num_searchable: int,
     _kNN: int,
     _benchmark: int,
 ):
     print("entering vectorize and query")
     vectorize_and_query(
-        _library, _hashnames, _ingested, _file_hash, _filename_base, _kNN, _benchmark
+        _library,
+        _hashnames,
+        _ingested,
+        _file_hash,
+        _filename_base,
+        _num_searchable,
+        _kNN,
+        _benchmark,
     )
 
 
@@ -354,6 +375,13 @@ def compare_these(
 
 
 def read_and_ingest(file_hash: str, filename_base: str):
+
+    # just in case files have not been created in time by Bouncer
+    if not (os.path.exists("buckets/ml_bucket.txt")):
+        open("buckets/ml_bucket.txt", "w").close()
+    if not (os.path.exists("buckets/import_bucket.txt")):
+        open("buckets/import_bucket.txt", "w").close()
+
     bouncer_read_df = pd.read_csv(
         "buckets/ml_bucket.txt", header=0, delimiter="\r", quoting=csv.QUOTE_NONE
     )
@@ -428,6 +456,8 @@ def main(bounce, n, benchmark, incoming_binary):
 
     set_of_strings = []
     set_of_hashnames = []
+    num_lib_files = 0
+
     for filename in os.listdir(pickle_directory):
         current_file_prefix = os.path.basename(filename)
         current_file_prefix = strip_filename(current_file_prefix, ".", False)
@@ -439,7 +469,9 @@ def main(bounce, n, benchmark, incoming_binary):
     """
         if (not (filename.startswith("."))) and os.path.isfile(f):
             if file_hash not in filename:
+                num_lib_files += 1  # incrementing only when 'usable' lib file -- satisfying conditions
                 print("loading %s" % (filename))
+
                 try:
                     lib_string = read_pickle(filename)
                     set_of_strings.append(lib_string)
@@ -448,6 +480,13 @@ def main(bounce, n, benchmark, incoming_binary):
                     print("failed to load pickle: %s" % (filename))
             else:
                 imported_lib_string = read_pickle(filename)
+    if num_lib_files == 0:
+        print(
+            "Library set has to include at least 2 unique files! Ingest one more to proceed.."
+        )
+        print("Exiting...")
+        exit()
+
     print("done loading in library, created sets")
     """
   pass in this list of strings and the input string to comparison functions
@@ -458,6 +497,7 @@ def main(bounce, n, benchmark, incoming_binary):
         imported_lib_string,
         file_hash,
         filename_base,
+        num_lib_files,
         n,
         benchmark,
     )
