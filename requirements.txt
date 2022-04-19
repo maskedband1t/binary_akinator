@@ -6,4 +6,5 @@ pefile
 lief
 nmslib
 pathlib
-
+sklearn
+ftfy
