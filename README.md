@@ -1,6 +1,9 @@
 Binary Akinator DESCRIPTION:
 This tool is run on an ELF or PE binary and tries to return k-Nearest-Neighbors files among those that have already been ingested into the pickled_files folder:
 
+Machine Learning Model detailed in [Binary Bouncer ReadMe](README_binary_bouncer.md).
+This model helps to strip unimportant sequences that mess with the validity of document matching due to its irrelevance.
+
     INTENDED USE:
         * To be run on single binary file to compare against other files in existing library set
         * Returns k-Nearest-Neighbors (kNN) among library set, or those passing benchmark confidence levels
