@@ -8,6 +8,7 @@ This tool is run on an ELF or PE binary and tries to return k-Nearest-Neighbors 
     RUNNING:
         * Requirements: Existence of /buckets & /model folders within project directory,   (nothing needed in it)
         * '--help' for help
+        * readelf (Unix tool) installation preferred (not required, affects Binary Bouncer results)
 
     Library Set:
         * Stored in pickled_files/ sub-directory

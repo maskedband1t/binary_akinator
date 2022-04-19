@@ -11,6 +11,7 @@ This tool is run on an ELF or PE binary and tries to return 2 buckets:
         * Requirements: Existence of /buckets & /model folders within project directory   (nothing needed in it)
         * You must run with the '-t' or '--train' flag to create model.
         * '--help' for help
+	* readelf (Unix tool) available to system preferable (less in Import bucket w/o)
 
     TRAINING: 
         - Runs a 20,000+ datapoint training set 
