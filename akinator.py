@@ -188,7 +188,8 @@ def vectorize_and_query(
         result.write("file hash is: %s \n" % (_file_hash))
         result.write("file hash is: %s \n" % (_filename_base))
         result.close()
-
+    
+    max_range = min(_num_searchable, _kNN)
     # prints the N closest neighbors to this file.
     if _kNN > 1:
         print("\n")
@@ -200,7 +201,7 @@ def vectorize_and_query(
             )
             result.close()
 
-        max_range = min(_num_searchable, _kNN)
+        
 
         for i in range(max_range):
             print(_hashnames[nbrs[0][0][i]])
